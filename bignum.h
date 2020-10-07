@@ -118,7 +118,9 @@ byte bn_last(bignum_t* n) {
 
 void bn_free(bignum_t* n) {
 	if (n) {
-		if (n->data) free(n->data);
+		if (n->data) {
+			free(n->data);
+		}
 		*n = bn_default;
 	}
 }
@@ -385,40 +387,46 @@ int bn_print(bignum_t* n) {
 int bn_add(bignum_t* n1, bignum_t* n2, bignum_t* out) {
 	if (n1 && n2 && out) {
 		unsigned carry = 0;
-		bignum_t* big, * small;
+		bignum_t big, small;
+		big = small = bn_default;
 
 		if (n1->byte_count >= n2->byte_count) {
-			big = n1;
-			small = n2;
+			bn_copy(n1, &big);
+			bn_copy(n2, &small);
 		}
 		else {
-			big = n2;
-			small = n1;
+			bn_copy(n2, &big);
+			bn_copy(n1, &small);
 		}
 
-		void* tmp = realloc(out->data, big->byte_count);
+		bn_free(out);
+
+		void* tmp = realloc(out->data, big.byte_count);
 
 		if (!tmp) return -2;
 
 		out->data = (byte*)tmp;
 
-		for (size_t i = out->byte_count; i < big->byte_count; i++) out->data[i] = bn_last(out);
+		for (size_t i = out->byte_count; i < big.byte_count; i++) out->data[i] = bn_last(out);
 
-		out->byte_count = big->byte_count;
+		out->byte_count = big.byte_count;
 
-		for (size_t i = 0; i < big->byte_count; i++) {
-			unsigned sum = big->data[i] + carry;
+		for (size_t i = 0; i < big.byte_count; i++) {
+			unsigned sum = big.data[i] + carry;
 
-			if (i < small->byte_count)
-				sum += small->data[i];
+			if (i < small.byte_count)
+				sum += small.data[i];
 			else
-				sum += bn_last(small);
+				sum += bn_last(&small);
 
 			carry = sum >> 8;
 			out->data[i] = sum & 0xFF;
 		}
 
 		try(bn_fix_signed(out));
+
+		bn_free(&big);
+		bn_free(&small);
 	}
 	else return -1;
 
@@ -489,6 +497,8 @@ int bn_mul(bignum_t* n1, bignum_t* n2, bignum_t* out) {
 			try(bn_copy(n1, &small));
 		}
 
+		bn_free(out);
+
 		negative = (big.data[big.byte_count - 1] != small.data[small.byte_count - 1]);
 
 		if (bn_last(&big) == 0xFF) try(bn_twos_comp(&big));
@@ -526,6 +536,8 @@ int bn_div(bignum_t* n1, bignum_t* n2, bignum_t* out) {
 		try(bn_copy(n1, &n));
 		try(bn_copy(n2, &d));
 
+		bn_free(out);
+
 		negative = (n.data[n.byte_count - 1] != d.data[d.byte_count - 1]);
 
 		if (bn_last(&n) == 0xFF) try(bn_twos_comp(&n));
@@ -549,6 +561,11 @@ int bn_div(bignum_t* n1, bignum_t* n2, bignum_t* out) {
 		if (negative) try(bn_twos_comp(out));
 
 		try(bn_fix_signed(out));
+
+		bn_free(&n);
+		bn_free(&d);
+		bn_free(&r);
+		bn_free(&tmp);
 	}
 	else return -1;
 

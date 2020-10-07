@@ -2,7 +2,7 @@
 #include <time.h>
 
 int main() {
-	unsigned size = 1000000;
+	unsigned size = 5000;
 	float time;
 	clock_t t1, t2;
 	bignum_t n1, n2, n3;
@@ -16,7 +16,7 @@ int main() {
 		bn_set_str(&n2, str2);
 
 		t1 = clock();
-		int result = bn_div(&n1, &n2, &n3);
+		int result = bn_pow(&n1, &n2, &n3);
 		t2 = clock();
 
 		time = (float)(t2 - t1) / CLOCKS_PER_SEC;
@@ -30,7 +30,7 @@ int main() {
 			printf("Error: %d\n", result);
 		}
 		else {
-			printf("%s / %s\n", str1, str2);
+			printf("%s ^ %s\n", str1, str2);
 			printf("Result: ");
 
 			bn_print(&n3);
